@@ -39,6 +39,10 @@ typedef std::function<void(void*, AsyncClient*, size_t len, uint32_t time)> AcAc
 typedef std::function<void(void*, AsyncClient*, int8_t error)> AcErrorHandler;
 typedef std::function<void(void*, AsyncClient*, void *data, size_t len)> AcDataHandler;
 typedef std::function<void(void*, AsyncClient*, uint32_t time)> AcTimeoutHandler;
+using AcThreadAction = std::function<void()>;
+
+//!Run action on the networking thread at the next convienience.
+void ScheduleAsyncTCPAction(AcThreadAction action);
 
 struct tcp_pcb;
 struct pbuf;
