@@ -88,8 +88,8 @@ static void _handle_async_event(lwip_event_packet_t * e){
     } else if(e->event == LWIP_TCP_ERROR){
         AsyncClient::_s_error(e->arg, e->error.err);
     } else if(e->event == ASYNC_ACTION) {
-      (e->action->function)();
-      delete e->action->function;
+      (*(e->action.function))();
+      delete e->action.function;
     }
     free((void*)(e));
 }
