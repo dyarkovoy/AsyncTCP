@@ -40,7 +40,7 @@ extern "C"{
  * */
 
 typedef enum {
-    LWIP_TCP_SENT, LWIP_TCP_RECV, LWIP_TCP_ERROR, LWIP_TCP_POLL, LWIP_TCP_CLEAR
+    LWIP_TCP_SENT, LWIP_TCP_RECV, LWIP_TCP_ERROR, LWIP_TCP_POLL, LWIP_TCP_CLEAR, ASYNC_ACTION,
 } lwip_event_t;
 
 typedef struct {
@@ -74,6 +74,9 @@ typedef struct {
                         const char * name;
                         ip_addr_t addr;
                 } dns;
+                struct {
+                  std::function<void()>* function;
+                } action;
         };
 } lwip_event_packet_t;
 
@@ -154,6 +157,9 @@ static void _handle_async_event(lwip_event_packet_t * e){
         AsyncClient::_s_poll(e->arg, e->poll.pcb);
     } else if(e->event == LWIP_TCP_ERROR){
         AsyncClient::_s_error(e->arg, e->error.err);
+    } else if(e->event == ASYNC_ACTION) {
+      (*(e->action.function))();
+      delete e->action.function;
     }
     free((void*)(e));
 }
@@ -404,7 +410,20 @@ static tcp_pcb * _tcp_listen_with_backlog(tcp_pcb * pcb, uint8_t backlog) {
 #define _tcp_listen(p) _tcp_listen_with_backlog(p, 0xFF);
 
 
-
+void ScheduleAsyncTCPAction(AcThreadAction action)
+{
+  if(!_async_queue){
+      return;
+  }
+  lwip_event_packet_t * e = (lwip_event_packet_t *)malloc(sizeof(lwip_event_packet_t));
+  e->event = ASYNC_ACTION;
+  e->arg = nullptr;
+  e->action.function = new AcThreadAction { std::move(action)};
+  if (xQueueSend(_async_queue, &e, portMAX_DELAY) != pdPASS) {
+    delete e->action.function;
+    free((void*)(e));
+  }
+}
 /*
   Async TCP Client
  */
